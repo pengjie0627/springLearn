@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/tx 
+	http://www.springframework.org/schema/tx/spring-tx.xsd">
+	
+	<!--1、把service和dao交给spring管理  -->
+	<bean id="accountService" class="com.hd123.tx.demo.AccountServiceImpl">
+		<!--属性注入  -->
+		<property name="account" ref="accountDao"></property>
+	
+	</bean>
+	<bean id="accountDao" class="com.hd123.tx.demo.AccountDaoImpl">
+		<!--属性注入  -->
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	
+	<!--2、配置数据库连接池(这里以c3p0为例)和spring的jdbc模板  -->
+	<!--第二种方式：通过context标签引入  -->
+	<context:property-placeholder location="classpath:jdbc.properties"/>
+	
+	<!--配置c3p0连接池  -->
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<property name="driverClass" value="${jdbc.driverClass}"></property>
+		<property name="jdbcUrl" value="${jdbc.url}"></property>
+		<property name="user" value="${jdbc.username}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+	</bean>
+
+	<!--配置事务管理器  -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	<!--配置事务增强  -->
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<!-- 这里可以配置事务隔离级别、传播行为、超时等等-->
+			<tx:method name="*" propagation="REQUIRED" read-only="false"/> 
+			<!--在实际业务开发中，我们一般这么写  -->
+			<!--以update开头的方法  -->
+			<!-- <tx:method name="update*" propagation="REQUIRED"/> -->
+			<!--以delete开头的方法  -->
+			<!-- <tx:method name="delete*" propagation="REQUIRED"/> -->
+			<!--以save开头的方法  -->
+			<!-- <tx:method name="save*" propagation="REQUIRED"/> -->
+			<!--以find开头的方法,不需要事务操作，只读就可以  -->
+			<!-- <tx:method name="find*" read-only="true"/> -->
+		</tx:attributes>
+	</tx:advice>
+	<!--aop的配置  -->
+	<aop:config>
+		<!--com.hd123.tx.demo包下的类AccountServiceImpl下的所有方法  -->
+		<aop:pointcut expression="execution(* com.hd123.tx.demo.AccountServiceImpl.*(..))" id="pointcut1"/>
+		<!--切面：一个切入点和一个通知的组合  -->
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="pointcut1"/>
+		<!--切面：多个切入点和多个通知的组合  -->
+		<!-- <aop:aspect></aop:aspect> -->
+	</aop:config>
+</beans>
